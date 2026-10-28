@@ -295,7 +295,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             : (user?.email?.split('@').first ?? 'Yukafii');
     final level = profile?.currentLevel ?? 5;
     final currentXp = profile != null ? profile.xpInCurrentLevel : 320;
-    final xpForNextLevel = profile != null ? profile.xpRequiredForNextLevel : 500;
+    final xpForNextLevel =
+        profile != null ? profile.xpRequiredForNextLevel : 500;
     final xpRatio =
         (currentXp / (xpForNextLevel > 0 ? xpForNextLevel : 1)).clamp(0.0, 1.0);
 

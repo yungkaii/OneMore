@@ -1,16 +1,18 @@
 /// Environment configuration for One More.
-/// Reads configuration passed via `--dart-define` or `--dart-define-from-file`.
+/// Reads configuration passed via `--dart-define` or `--dart-define-from-file`,
+/// with fallback to configured project credentials.
 class EnvConfig {
   EnvConfig._();
 
   static const String supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: '',
+    defaultValue: 'https://rcnxgvaewulcotnqzmjp.supabase.co',
   );
 
   static const String supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: '',
+    defaultValue:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjbnhndmFld3VsY290bnF6bWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxODM5OTEsImV4cCI6MjEwODc1OTk5MX0.zDG3LJYojmwk_t1ecvWjOLFaU2WwmOCnWkurq4L3TKY',
   );
 
   /// Default application timezone.
