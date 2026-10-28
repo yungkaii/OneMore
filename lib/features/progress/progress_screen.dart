@@ -20,8 +20,11 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
   Widget build(BuildContext context) {
     final statsAsync = ref.watch(weeklyStatsProvider);
     final stats = statsAsync.value;
-    final completionRate = stats != null && stats.completionRate > 0 ? stats.completionRate : 0.75;
-    final totalCompletions = stats != null && stats.totalCompletions > 0 ? stats.totalCompletions : 18;
+    final completionRate =
+        stats != null && stats.completionRate > 0 ? stats.completionRate : 0.75;
+    final totalCompletions = stats != null && stats.totalCompletions > 0
+        ? stats.totalCompletions
+        : 18;
     final percentText = '${(completionRate * 100).round()}%';
 
     return Scaffold(

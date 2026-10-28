@@ -86,9 +86,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           color: AppColors.accentGreen,
           backgroundColor: AppColors.darkSurface,
           onRefresh: () async {
-            ref.read(profileNotifierProvider.notifier).loadProfile();
-            ref.read(habitsNotifierProvider.notifier).loadHabits();
-            ref.read(todayCompletionsProvider.notifier).loadTodayCompletions();
+            await Future.wait([
+              ref.read(profileNotifierProvider.notifier).loadProfile(),
+              ref.read(habitsNotifierProvider.notifier).loadHabits(),
+              ref
+                  .read(todayCompletionsProvider.notifier)
+                  .loadTodayCompletions(),
+            ]);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -284,6 +288,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             label: const Text('Tambah Misi',
                 style: TextStyle(fontWeight: FontWeight.w700)),
             onPressed: () => context.push('/habits/new'),
+          ),
+          const SizedBox(height: 10),
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.accentXp,
+            ),
+            icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+            label: const Text(
+              'Muat 6 Misi Rekomendasi',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            onPressed: () async {
+              await ref
+                  .read(habitsNotifierProvider.notifier)
+                  .seedStarterHabits();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('6 Misi rekomendasi berhasil dimuat!'),
+                    backgroundColor: AppColors.accentGreenDark,
+                  ),
+                );
+              }
+            },
           ),
         ],
       ),

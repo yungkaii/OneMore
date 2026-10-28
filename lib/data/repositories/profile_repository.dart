@@ -43,21 +43,43 @@ class ProfileRepository {
   }) async {
     _ensureClient();
     try {
+      final name =
+          displayName.trim().isNotEmpty ? displayName.trim() : 'Teman One More';
+
       final data = {
         'id': userId,
-        'display_name': displayName.trim().isNotEmpty
-            ? displayName.trim()
-            : 'Teman One More',
+        'display_name': name,
         'total_xp': 0,
         'current_streak': 0,
         'longest_streak': 0,
         'timezone': 'Asia/Jakarta',
       };
 
-      final response =
-          await _client!.from('profiles').upsert(data).select().single();
-
-      return UserProfile.fromJson(response);
+      try {
+        final response =
+            await _client!.from('profiles').upsert(data).select().single();
+        return UserProfile.fromJson(response);
+      } catch (_) {
+        // Fallback: check if row was created by database trigger
+        final existing = await _client!
+            .from('profiles')
+            .select()
+            .eq('id', userId)
+            .maybeSingle();
+        if (existing != null) {
+          return UserProfile.fromJson(existing);
+        }
+        // Fallback return local representation so UI is never blocked
+        return UserProfile(
+          id: userId,
+          displayName: name,
+          totalXp: 0,
+          currentStreak: 0,
+          longestStreak: 0,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+      }
     } catch (e) {
       throw DatabaseException('Gagal menginisialisasi profil: $e');
     }

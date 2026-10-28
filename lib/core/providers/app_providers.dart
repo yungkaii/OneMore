@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/achievement.dart';
 import '../../data/models/habit.dart';
+import '../../data/models/starter_habits.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/repositories/achievement_repository.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -240,6 +241,20 @@ class HabitsNotifier extends StateNotifier<AsyncValue<List<Habit>>> {
     await _repo.deleteHabit(habitId, _userId);
     await _notifications.cancelHabitReminder(habitId);
     await loadHabits();
+  }
+
+  Future<void> seedStarterHabits() async {
+    if (_userId == null) return;
+    state = const AsyncValue.loading();
+    try {
+      final recommended = StarterHabits.getRecommended(_userId);
+      for (final h in recommended) {
+        await _repo.createHabit(h);
+      }
+      await loadHabits();
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 }
 

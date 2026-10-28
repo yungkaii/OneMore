@@ -44,13 +44,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     try {
       final authRepo = ref.read(authRepositoryProvider);
-      await authRepo.signUp(
+      final response = await authRepo.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         displayName: _nameController.text.trim(),
       );
 
-      // On successful registration, GoRouter auth listener routes to /home
+      if (mounted) {
+        if (response.session != null) {
+          context.go('/home');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Pendaftaran berhasil! Silakan masuk dengan akun Anda.'),
+              backgroundColor: AppColors.accentGreenDark,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          context.go('/login');
+        }
+      }
     } catch (e) {
       if (mounted) {
         setState(() {

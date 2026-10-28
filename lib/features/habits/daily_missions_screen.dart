@@ -49,6 +49,20 @@ class _DailyMissionsScreenState extends ConsumerState<DailyMissionsScreen> {
   }
 
   Future<void> _handleToggleMission(Habit habit, int currentLevel) async {
+    final now = DateTime.now();
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    if (_selectedDate.isAfter(todayEnd)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Misi belum dapat diselesaikan sebelum tanggalnya tiba.'),
+          backgroundColor: AppColors.darkSurfaceElevated,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     if (_processingHabits.contains(habit.id)) return;
 
     setState(() => _processingHabits.add(habit.id));

@@ -280,6 +280,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     if (confirmed == true) {
       await ref.read(authRepositoryProvider).signOut();
+      if (mounted) {
+        context.go('/login');
+      }
     }
   }
 

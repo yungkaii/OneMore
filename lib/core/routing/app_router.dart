@@ -29,11 +29,14 @@ final routerProvider = Provider<GoRouter>((ref) {
   final user = ref.watch(currentUserProvider);
 
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/splash',
     redirect: (context, state) {
       final hasCompletedOnboarding = storage.hasCompletedOnboarding;
       final isAuthenticated = user != null;
       final path = state.uri.path;
+
+      // Allow splash to run freely on app launch
+      if (path == '/splash') return null;
 
       // 1. If onboarding not yet completed, redirect to splash or onboarding
       if (!hasCompletedOnboarding &&
@@ -57,10 +60,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // 4. Authenticated user trying to access login/register/onboarding
       if (isAuthenticated &&
-          (path == '/login' ||
-              path == '/register' ||
-              path == '/onboarding' ||
-              path == '/splash')) {
+          (path == '/login' || path == '/register' || path == '/onboarding')) {
         return '/home';
       }
 

@@ -19,6 +19,12 @@ class AchievementRepository {
           .select()
           .order('target_value', ascending: true);
 
+      // Fallback canonical achievements if database has not been seeded yet
+      final List<Map<String, dynamic>> rawList =
+          (canonicalRes as List).isNotEmpty
+              ? List<Map<String, dynamic>>.from(canonicalRes)
+              : _fallbackCanonicalAchievements;
+
       // 2. Fetch user's unlocked achievements
       final userUnlockedRes = await client
           .from('user_achievements')
@@ -32,8 +38,8 @@ class AchievementRepository {
         if (date != null) unlockedMap[achId] = date;
       }
 
-      return (canonicalRes as List).map((raw) {
-        final ach = Achievement.fromJson(raw as Map<String, dynamic>);
+      return rawList.map((raw) {
+        final ach = Achievement.fromJson(raw);
         return ach.copyWith(unlockedAt: unlockedMap[ach.id]);
       }).toList();
     } on PostgrestException catch (e) {
@@ -53,4 +59,61 @@ class AchievementRepository {
       );
     }
   }
+
+  static const List<Map<String, dynamic>> _fallbackCanonicalAchievements = [
+    {
+      'id': 'first_step',
+      'title': 'Pemula',
+      'description': 'Selesaikan kebiasaan pertama Anda.',
+      'icon_name': 'military_tech',
+      'xp_reward': 25,
+      'target_type': 'total_completions',
+      'target_value': 1,
+    },
+    {
+      'id': 'getting_started',
+      'title': 'Langkah Awal',
+      'description': 'Raih total akumulasi 100 XP pertamamu.',
+      'icon_name': 'stars',
+      'xp_reward': 30,
+      'target_type': 'total_xp',
+      'target_value': 100,
+    },
+    {
+      'id': 'three_in_a_row',
+      'title': 'Tiga Hari Beruntun',
+      'description': 'Pertahankan streak selama 3 hari berturut-turut.',
+      'icon_name': 'local_fire_department',
+      'xp_reward': 35,
+      'target_type': 'streak_days',
+      'target_value': 3,
+    },
+    {
+      'id': 'full_week',
+      'title': 'Konsisten',
+      'description': 'Tuntaskan streak konsisten selama 7 hari berturut-turut.',
+      'icon_name': 'verified',
+      'xp_reward': 50,
+      'target_type': 'streak_days',
+      'target_value': 7,
+    },
+    {
+      'id': 'consistent_10',
+      'title': 'Produktif',
+      'description': 'Selesaikan total 30 misi kebiasaan harian.',
+      'icon_name': 'workspace_premium',
+      'xp_reward': 40,
+      'target_type': 'total_completions',
+      'target_value': 30,
+    },
+    {
+      'id': 'master_of_habit',
+      'title': 'Master of Habit',
+      'description': 'Raih Level 5 dengan total minimal 400 XP.',
+      'icon_name': 'emoji_events',
+      'xp_reward': 100,
+      'target_type': 'level',
+      'target_value': 5,
+    },
+  ];
 }

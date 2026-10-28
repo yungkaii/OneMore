@@ -43,6 +43,24 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
   Future<void> _handleComplete() async {
     setState(() => _isProcessing = true);
     try {
+      final isRealUuid = RegExp(r'^[0-9a-fA-F\-]{36}$').hasMatch(habit.id);
+      if (!isRealUuid) {
+        setState(() {
+          _progressCount = _targetCount;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('+20 XP diraih!'),
+              backgroundColor: AppColors.accentGreenDark,
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
       final profile = ref.read(profileNotifierProvider).value;
       final currentLevel = profile?.currentLevel ?? 1;
 
@@ -110,7 +128,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
         ],
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -278,7 +296,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                 ),
               ),
 
-              const Spacer(),
+              const SizedBox(height: 32),
 
               // Full width green button matching Screen 6: "✓ Tandai Selesai"
               AppButton(

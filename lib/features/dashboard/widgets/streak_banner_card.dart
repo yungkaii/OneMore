@@ -67,4 +67,3 @@ class StreakBannerCard extends StatelessWidget {
     );
   }
 }
-

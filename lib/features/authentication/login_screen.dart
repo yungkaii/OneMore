@@ -46,8 +46,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-
-      // Successfully signed in; GoRouter redirect handles navigation to /home
+      if (mounted) {
+        context.go('/home');
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
