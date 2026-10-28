@@ -2,65 +2,66 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/streak_badge.dart';
 import '../../../data/models/user_profile.dart';
 
 class XpProgressCard extends StatelessWidget {
   final UserProfile profile;
+  final VoidCallback? onTap;
 
-  const XpProgressCard({super.key, required this.profile});
+  const XpProgressCard({
+    super.key,
+    required this.profile,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     final currentLevel = profile.currentLevel;
     final xpInLevel = profile.xpInCurrentLevel;
     final progress = profile.levelProgress;
-    final streak = profile.currentStreak;
 
     return AppCard(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      backgroundColor: AppColors.darkSurface,
+      borderColor: AppColors.darkBorder,
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Text(
+                'Lv. $currentLevel',
+                style: AppTypography.headlineMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
               Row(
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentXp.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Level $currentLevel',
-                      style: AppTypography.statNumberSmall.copyWith(
-                        color: AppColors.accentXp,
-                        fontSize: 14,
-                      ),
-                    ),
+                  const Icon(
+                    Icons.emoji_events_rounded,
+                    color: AppColors.gold,
+                    size: 16,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 5),
                   Text(
-                    '${profile.totalXp} Total XP',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: isDark
-                          ? AppColors.darkTextSecondary
-                          : AppColors.lightTextSecondary,
+                    '$xpInLevel / 100 XP',
+                    style: AppTypography.statNumberSmall.copyWith(
+                      color: AppColors.darkTextSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-              StreakBadge(days: streak),
             ],
           ),
-          const SizedBox(height: 16),
-          // Progress Bar
+          const SizedBox(height: 12),
+
+          // Neon glowing green progress bar matching design
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: TweenAnimationBuilder<double>(
@@ -70,36 +71,13 @@ class XpProgressCard extends StatelessWidget {
               builder: (context, value, _) {
                 return LinearProgressIndicator(
                   value: value,
-                  minHeight: 10,
-                  backgroundColor: isDark
-                      ? AppColors.darkSurfaceElevated
-                      : AppColors.lightSurfaceElevated,
+                  minHeight: 8,
+                  backgroundColor: AppColors.darkSurfaceElevated,
                   valueColor: const AlwaysStoppedAnimation<Color>(
                       AppColors.accentGreen),
                 );
               },
             ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '$xpInLevel / 100 XP menuju Level ${currentLevel + 1}',
-                style: AppTypography.bodySmall.copyWith(
-                  color: isDark
-                      ? AppColors.darkTextSecondary
-                      : AppColors.lightTextSecondary,
-                ),
-              ),
-              Text(
-                '${(progress * 100).toInt()}%',
-                style: AppTypography.statNumberSmall.copyWith(
-                  fontSize: 12,
-                  color: AppColors.accentGreen,
-                ),
-              ),
-            ],
           ),
         ],
       ),

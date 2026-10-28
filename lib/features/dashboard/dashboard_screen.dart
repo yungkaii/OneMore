@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_strings.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/providers/app_providers.dart';
-import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/level_up_dialog.dart';
 import '../../data/models/habit.dart';
 import 'widgets/greeting_card.dart';
 import 'widgets/mission_item_tile.dart';
+import 'widgets/streak_banner_card.dart';
 import 'widgets/xp_progress_card.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -41,7 +40,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '${AppStrings.xpEarnedToast} (${habit.title})',
+                '+${habit.xpReward} XP diraih! (${habit.title})',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               backgroundColor: AppColors.accentGreenDark,
@@ -50,7 +49,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           );
 
-          // Level up celebration check
           if (result.currentLevel > currentLevel) {
             LevelUpDialog.show(context, result.currentLevel, result.totalXp);
           }
@@ -77,17 +75,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     final profileAsync = ref.watch(profileNotifierProvider);
     final habitsAsync = ref.watch(habitsNotifierProvider);
     final completionsAsync = ref.watch(todayCompletionsProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.darkBackground,
       body: SafeArea(
         child: RefreshIndicator(
           color: AppColors.accentGreen,
+          backgroundColor: AppColors.darkSurface,
           onRefresh: () async {
             ref.read(profileNotifierProvider.notifier).loadProfile();
             ref.read(habitsNotifierProvider.notifier).loadHabits();
@@ -99,48 +96,58 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header & Profile Greeting
+                // Top Greeting & Avatar
                 profileAsync.when(
                   data: (profile) => GreetingCard(
-                    displayName: profile?.displayName ?? 'Teman One More',
+                    displayName: profile?.displayName ?? 'Yukafii',
+                    onAvatarTap: () => context.go('/profile'),
                   ),
-                  loading: () => const GreetingCard(displayName: '...'),
-                  error: (_, __) =>
-                      const GreetingCard(displayName: 'Teman One More'),
+                  loading: () => const GreetingCard(displayName: 'Yukafii'),
+                  error: (_, __) => const GreetingCard(displayName: 'Yukafii'),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
 
-                // XP & Level Progression Card
+                // Level Progress Card
                 profileAsync.when(
                   data: (profile) {
                     if (profile == null) return const SizedBox.shrink();
-                    return XpProgressCard(profile: profile);
+                    return XpProgressCard(
+                      profile: profile,
+                      onTap: () => context.push('/level-xp'),
+                    );
                   },
                   loading: () => Container(
-                    height: 120,
+                    height: 80,
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.darkSurface
-                          : AppColors.lightSurface,
-                      borderRadius: BorderRadius.circular(16),
+                      color: AppColors.darkSurface,
+                      borderRadius: BorderRadius.circular(18),
                     ),
-                    alignment: Alignment.center,
-                    child: const CircularProgressIndicator(strokeWidth: 2),
                   ),
                   error: (e, _) => Center(child: Text(e.toString())),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 12),
 
-                // Missions Section Header
+                // Streak Banner Card
+                profileAsync.when(
+                  data: (profile) => StreakBannerCard(
+                    days: profile?.currentStreak ?? 7,
+                    onTap: () => context.push('/streak'),
+                  ),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+                const SizedBox(height: 24),
+
+                // Section Header: "Misi Hari Ini" ... "3/6 selesai"
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      AppStrings.todayMissionsTitle,
+                      'Misi Hari Ini',
                       style: AppTypography.titleLarge.copyWith(
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
                       ),
                     ),
                     habitsAsync.when(
@@ -153,11 +160,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             .where((h) => completedSet.contains(h.id))
                             .length;
                         return Text(
-                          '$doneCount dari ${scheduled.length} ${AppStrings.completedCountSuffix}',
+                          '$doneCount/${scheduled.length} selesai',
                           style: AppTypography.bodySmall.copyWith(
-                            color: isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.lightTextSecondary,
+                            color: AppColors.darkTextSecondary,
                             fontWeight: FontWeight.w600,
                           ),
                         );
@@ -169,7 +174,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Missions List
+                // Mission List
                 habitsAsync.when(
                   data: (habits) {
                     final now = DateTime.now();
@@ -179,24 +184,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     final profile = profileAsync.value;
                     final currentLevel = profile?.currentLevel ?? 1;
 
-                    if (habits.isEmpty) {
-                      return EmptyState(
-                        icon: Icons.checklist_rounded,
-                        title: 'Mulai Langkah Pertamamu',
-                        message:
-                            'Tambahkan kebiasaan harian baru untuk mulai mengumpulkan XP dan streak.',
-                        actionLabel: AppStrings.createHabit,
-                        onAction: () => context.push('/habits/new'),
-                      );
-                    }
-
-                    if (todayHabits.isEmpty) {
-                      return const EmptyState(
-                        icon: Icons.event_available_rounded,
-                        title: AppStrings.noMissionsScheduled,
-                        message:
-                            'Kamu tidak memiliki jadwal kebiasaan aktif untuk hari ini.',
-                      );
+                    if (habits.isEmpty || todayHabits.isEmpty) {
+                      return _buildEmptyMissionsCard(context);
                     }
 
                     return ListView.separated(
@@ -216,6 +205,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           isProcessing: isProcessing,
                           onToggle: () =>
                               _handleCompleteHabit(habit, currentLevel),
+                          onTap: () =>
+                              context.push('/habits/detail', extra: habit),
                         );
                       },
                     );
@@ -223,7 +214,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   loading: () => const Center(
                     child: Padding(
                       padding: EdgeInsets.all(32),
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.accentGreen),
+                      ),
                     ),
                   ),
                   error: (e, _) => Center(
@@ -233,17 +228,64 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 24),
               ],
             ),
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.accentGreen,
-        foregroundColor: const Color(0xFF0F260C),
-        elevation: 2,
-        onPressed: () => context.push('/habits/new'),
-        child: const Icon(Icons.add_rounded, size: 28),
+    );
+  }
+
+  /// Empty state matching the design image (mountain silhouette + "+ Tambah Misi")
+  Widget _buildEmptyMissionsCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      decoration: BoxDecoration(
+        color: AppColors.darkSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.darkBorder),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.landscape_rounded,
+            size: 48,
+            color: AppColors.darkTextTertiary.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Hari ini belum ada misi selesai',
+            textAlign: TextAlign.center,
+            style: AppTypography.titleMedium.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Yuk, mulai dulu dari yang kecil.\nKamu pasti bisa!',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.darkTextSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentGreen,
+              foregroundColor: const Color(0xFF032210),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: const Text('Tambah Misi',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            onPressed: () => context.push('/habits/new'),
+          ),
+        ],
       ),
     );
   }

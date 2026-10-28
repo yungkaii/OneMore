@@ -4,71 +4,70 @@ import '../../../core/constants/app_typography.dart';
 
 class GreetingCard extends StatelessWidget {
   final String displayName;
+  final VoidCallback? onAvatarTap;
 
-  const GreetingCard({super.key, required this.displayName});
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour >= 4 && hour < 11) return 'Selamat pagi';
-    if (hour >= 11 && hour < 15) return 'Selamat siang';
-    if (hour >= 15 && hour < 19) return 'Selamat sore';
-    return 'Selamat malam';
-  }
-
-  String _formatIndonesianDate(DateTime date) {
-    const days = [
-      'Senin',
-      'Selasa',
-      'Rabu',
-      'Kamis',
-      'Jumat',
-      'Sabtu',
-      'Minggu'
-    ];
-    const months = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember'
-    ];
-
-    final dayName = days[date.weekday - 1];
-    final monthName = months[date.month - 1];
-    return '$dayName, ${date.day} $monthName ${date.year}';
-  }
+  const GreetingCard({
+    super.key,
+    required this.displayName,
+    this.onAvatarTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final now = DateTime.now();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          _formatIndonesianDate(now),
-          style: AppTypography.bodySmall.copyWith(
-            color: isDark
-                ? AppColors.darkTextSecondary
-                : AppColors.lightTextSecondary,
-            fontWeight: FontWeight.w500,
-          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Hai, $displayName',
+                  style: AppTypography.headlineMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Text('👋', style: TextStyle(fontSize: 18)),
+              ],
+            ),
+            const SizedBox(height: 3),
+            Text(
+              'One more step. One more day.',
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.darkTextSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          '${_getGreeting()}, $displayName',
-          style: AppTypography.headlineMedium.copyWith(
-            color:
-                isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+
+        // Circular Avatar with green ring (matches design image)
+        GestureDetector(
+          onTap: onAvatarTap,
+          child: Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.accentGreen.withValues(alpha: 0.8),
+                width: 2,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: const Color(0xFF282F3E),
+              child: Text(
+                displayName.isNotEmpty ? displayName[0].toUpperCase() : 'Y',
+                style: AppTypography.titleMedium.copyWith(
+                  color: AppColors.accentGreen,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ),
         ),
       ],

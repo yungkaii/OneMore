@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/xp_badge.dart';
 import '../../../data/models/habit.dart';
 
 class MissionItemTile extends StatelessWidget {
@@ -11,6 +9,7 @@ class MissionItemTile extends StatelessWidget {
   final bool isCompleted;
   final bool isProcessing;
   final VoidCallback onToggle;
+  final VoidCallback? onTap;
 
   const MissionItemTile({
     super.key,
@@ -18,56 +17,130 @@ class MissionItemTile extends StatelessWidget {
     required this.isCompleted,
     required this.isProcessing,
     required this.onToggle,
+    this.onTap,
   });
 
-  String _getCategoryLabel(String cat) {
-    switch (cat) {
-      case 'health':
-        return AppStrings.catHealth;
-      case 'learning':
-        return AppStrings.catLearning;
-      case 'mindfulness':
-        return AppStrings.catMindfulness;
-      case 'productivity':
-        return AppStrings.catProductivity;
-      case 'routine':
-      default:
-        return AppStrings.catRoutine;
+  IconData _getHabitIcon(String title, String category) {
+    final lower = title.toLowerCase();
+    if (lower.contains('minum') ||
+        lower.contains('air') ||
+        lower.contains('water')) {
+      return Icons.water_drop_rounded;
     }
+    if (lower.contains('olahraga') ||
+        lower.contains('lari') ||
+        lower.contains('gym')) {
+      return Icons.directions_run_rounded;
+    }
+    if (lower.contains('baca') ||
+        lower.contains('buku') ||
+        lower.contains('book')) {
+      return Icons.menu_book_rounded;
+    }
+    if (lower.contains('tidur') ||
+        lower.contains('sleep') ||
+        lower.contains('istirahat')) {
+      return Icons.bedtime_rounded;
+    }
+    if (lower.contains('makan') ||
+        lower.contains('pola') ||
+        lower.contains('food')) {
+      return Icons.restaurant_rounded;
+    }
+    if (lower.contains('belajar') ||
+        lower.contains('kerja') ||
+        lower.contains('fokus')) {
+      return Icons.laptop_mac_rounded;
+    }
+    return Icons.task_alt_rounded;
+  }
+
+  Color _getIconBgColor(String title, String category) {
+    final lower = title.toLowerCase();
+    if (lower.contains('minum')) return const Color(0xFF0284C7);
+    if (lower.contains('olahraga')) return const Color(0xFF6366F1);
+    if (lower.contains('baca')) return const Color(0xFF3B82F6);
+    if (lower.contains('tidur')) return const Color(0xFF8B5CF6);
+    if (lower.contains('makan')) return const Color(0xFF64748B);
+    if (lower.contains('belajar') || lower.contains('kerja')) {
+      return const Color(0xFF4F46E5);
+    }
+    return AppColors.accentGreenDark;
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final catColor =
-        AppColors.categoryColors[habit.category] ?? AppColors.accentGreen;
+    final iconColor = _getIconBgColor(habit.title, habit.category);
 
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      backgroundColor: isCompleted
-          ? (isDark
-              ? AppColors.darkSurface.withValues(alpha: 0.5)
-              : AppColors.lightSurfaceElevated.withValues(alpha: 0.5))
-          : null,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      backgroundColor: AppColors.darkSurface,
+      borderColor: AppColors.darkBorder,
+      onTap: onTap ?? onToggle,
       child: Row(
         children: [
-          // Checkbox / Loading Circle
+          // Squircle Icon container matching design image
+          Container(
+            height: 42,
+            width: 42,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              _getHabitIcon(habit.title, habit.category),
+              color: iconColor.withValues(alpha: 0.9),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Title & XP label
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  habit.title,
+                  style: AppTypography.titleMedium.copyWith(
+                    color:
+                        isCompleted ? AppColors.darkTextTertiary : Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '+${habit.xpReward} XP',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: isCompleted
+                        ? AppColors.darkTextTertiary
+                        : AppColors.accentGreen,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Circular Checkbox matching design image
           GestureDetector(
             onTap: isProcessing ? null : onToggle,
             behavior: HitTestBehavior.opaque,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              height: 28,
-              width: 28,
+              height: 26,
+              width: 26,
               decoration: BoxDecoration(
                 color: isCompleted ? AppColors.accentGreen : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: isCompleted
                       ? AppColors.accentGreen
-                      : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                  width: 2,
+                      : const Color(0xFF475569),
+                  width: 1.8,
                 ),
               ),
               child: isProcessing
@@ -82,80 +155,12 @@ class MissionItemTile extends StatelessWidget {
                   : (isCompleted
                       ? const Icon(
                           Icons.check_rounded,
-                          size: 18,
-                          color: Color(0xFF0F260C),
+                          size: 17,
+                          color: Color(0xFF032210),
                         )
                       : null),
             ),
           ),
-          const SizedBox(width: 14),
-
-          // Habit Title & Category
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  habit.title,
-                  style: AppTypography.titleMedium.copyWith(
-                    color: isCompleted
-                        ? (isDark
-                            ? AppColors.darkTextTertiary
-                            : AppColors.lightTextTertiary)
-                        : (isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary),
-                    decoration: isCompleted ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: catColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _getCategoryLabel(habit.category),
-                        style: AppTypography.bodySmall.copyWith(
-                          color: catColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    if (habit.reminderTime != null) ...[
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.alarm_rounded,
-                        size: 12,
-                        color: isDark
-                            ? AppColors.darkTextTertiary
-                            : AppColors.lightTextTertiary,
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        habit.reminderTime!,
-                        style: AppTypography.bodySmall.copyWith(
-                          fontSize: 10,
-                          color: isDark
-                              ? AppColors.darkTextTertiary
-                              : AppColors.lightTextTertiary,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // XP Badge
-          const SizedBox(width: 8),
-          XpBadge(xp: habit.xpReward, showPlus: true),
         ],
       ),
     );
