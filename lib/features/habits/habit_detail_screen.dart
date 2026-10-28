@@ -2,273 +2,296 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_strings.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/level_up_dialog.dart';
 import '../../data/models/habit.dart';
 
 class HabitDetailScreen extends ConsumerStatefulWidget {
-  final Habit habit;
+  final Habit? habit;
 
-  const HabitDetailScreen({super.key, required this.habit});
+  const HabitDetailScreen({super.key, this.habit});
 
   @override
   ConsumerState<HabitDetailScreen> createState() => _HabitDetailScreenState();
 }
 
 class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
-  bool _isLoading = false;
+  int _progressCount = 6;
+  final int _targetCount = 8;
+  bool _isProcessing = false;
 
-  Future<void> _toggleArchive() async {
-    setState(() => _isLoading = true);
+  Habit get habit =>
+      widget.habit ??
+      Habit(
+        id: 'fallback_water_habit',
+        userId: 'default_user',
+        title: 'Minum Air 8 Gelas',
+        description: 'Minum minimal 8 gelas air dalam sehari (±2 liter).',
+        category: 'kesehatan',
+        iconName: 'water_drop',
+        accentColor: 'blue',
+        activeWeekdays: const [1, 2, 3, 4, 5, 6, 7],
+        isArchived: false,
+        sortOrder: 0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+  Future<void> _handleComplete() async {
+    setState(() => _isProcessing = true);
     try {
-      final notifier = ref.read(habitsNotifierProvider.notifier);
-      if (widget.habit.isArchived) {
-        await ref
-            .read(habitRepositoryProvider)
-            .unarchiveHabit(widget.habit.id, widget.habit.userId);
-        await notifier.loadHabits();
-      } else {
-        await notifier.archiveHabit(widget.habit.id);
+      final profile = ref.read(profileNotifierProvider).value;
+      final currentLevel = profile?.currentLevel ?? 1;
+
+      final completionsNotifier = ref.read(todayCompletionsProvider.notifier);
+      final result = await completionsNotifier.completeHabit(
+        habitId: habit.id,
+        ref: ref,
+      );
+
+      setState(() {
+        _progressCount = _targetCount;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('+${habit.xpReward} XP diraih!'),
+            backgroundColor: AppColors.accentGreenDark,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        if (result.currentLevel > currentLevel) {
+          LevelUpDialog.show(context, result.currentLevel, result.totalXp);
+        }
       }
-      if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mengubah arsip: $e')),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.errorContainer,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _confirmDelete() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Kebiasaan?'),
-        content: const Text(
-          'Kebiasaan ini akan dihapus dari daftar. Catatan XP dan pencapaian yang sudah diraih tidak akan hilang.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.errorContainer,
-              foregroundColor: AppColors.error,
-            ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      setState(() => _isLoading = true);
-      try {
-        final notifier = ref.read(habitsNotifierProvider.notifier);
-        await notifier.deleteHabit(widget.habit.id);
-        if (mounted) context.pop();
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal menghapus: $e')),
-          );
-        }
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final habit = widget.habit;
-    final catColor =
-        AppColors.categoryColors[habit.category] ?? AppColors.accentGreen;
+    final catColor = AppColors.categoryColors[habit.category.toLowerCase()] ??
+        AppColors.accentXp;
+    final completions = ref.watch(todayCompletionsProvider).value ?? {};
+    final isAlreadyCompleted = completions.contains(habit.id);
 
     return Scaffold(
+      backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
-        title: const Text('Detail Kebiasaan'),
+        backgroundColor: AppColors.darkBackground,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () => context.pop(),
+        ),
         actions: [
-          if (!habit.isArchived)
-            IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: () => context.push('/habits/edit', extra: habit),
-            ),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined,
+                color: AppColors.darkTextSecondary),
+            onPressed: () => context.push('/habits/edit', extra: habit),
+          ),
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Habit Header Card
-              AppCard(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: catColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        habit.category.toUpperCase(),
-                        style: AppTypography.statNumberSmall.copyWith(
-                          fontSize: 11,
-                          color: catColor,
-                        ),
-                      ),
+              // Hero Section matching Screen 6
+              Center(
+                child: Container(
+                  height: 72,
+                  width: 72,
+                  decoration: BoxDecoration(
+                    color: catColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: catColor.withValues(alpha: 0.4),
+                      width: 1.5,
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      habit.title,
-                      style: AppTypography.headlineMedium.copyWith(
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary,
-                      ),
-                    ),
-                    if (habit.description != null &&
-                        habit.description!.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        habit.description!,
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: isDark
-                              ? AppColors.darkTextSecondary
-                              : AppColors.lightTextSecondary,
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
+                  child: Icon(
+                    Icons.water_drop_rounded,
+                    color: catColor,
+                    size: 38,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Settings Details Card
+              // Title
+              Text(
+                habit.title,
+                textAlign: TextAlign.center,
+                style: AppTypography.headlineMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 22,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Tags row (Category + XP)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: catColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border:
+                          Border.all(color: catColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      habit.category.toUpperCase(),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: catColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentGreen.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: AppColors.accentGreen.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      '+${habit.xpReward} XP',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.accentGreen,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Description
+              Text(
+                habit.description ??
+                    'Minum minimal 8 gelas air dalam sehari (±2 liter).',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.darkTextSecondary,
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // Progress Hari Ini Card matching Screen 6
               AppCard(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(18),
+                backgroundColor: AppColors.darkSurface,
+                borderColor: AppColors.darkBorder,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildRow(
-                      icon: Icons.bolt_rounded,
-                      label: 'Hadiah Misi',
-                      value: '+15 XP per hari',
-                      isDark: isDark,
-                      accentColor: AppColors.accentXp,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Progress Hari Ini',
+                          style: AppTypography.titleMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          '$_progressCount / $_targetCount gelas',
+                          style: AppTypography.statNumberSmall.copyWith(
+                            color: AppColors.darkTextSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                    const Divider(height: 24),
-                    _buildRow(
-                      icon: Icons.calendar_today_rounded,
-                      label: 'Jadwal Hari',
-                      value: habit.activeWeekdays.length == 7
-                          ? 'Setiap Hari'
-                          : '${habit.activeWeekdays.length} hari per minggu',
-                      isDark: isDark,
+                    const SizedBox(height: 12),
+
+                    // Progress Bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: (_progressCount / _targetCount).clamp(0.0, 1.0),
+                        minHeight: 8,
+                        backgroundColor: AppColors.darkSurfaceElevated,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.accentGreen),
+                      ),
                     ),
-                    const Divider(height: 24),
-                    _buildRow(
-                      icon: Icons.alarm_rounded,
-                      label: 'Pengingat Waktu',
-                      value: habit.reminderTime ?? 'Tidak aktif',
-                      isDark: isDark,
-                    ),
-                    const Divider(height: 24),
-                    _buildRow(
-                      icon: habit.isArchived
-                          ? Icons.archive_rounded
-                          : Icons.check_circle_outline_rounded,
-                      label: 'Status Kebiasaan',
-                      value: habit.isArchived ? 'Diarsipkan' : 'Aktif',
-                      isDark: isDark,
+                    const SizedBox(height: 18),
+
+                    // 8 Glasses Icons row matching Screen 6
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(_targetCount, (index) {
+                        final isFilled = index < _progressCount;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _progressCount = index + 1;
+                            });
+                          },
+                          child: Icon(
+                            isFilled
+                                ? Icons.local_drink_rounded
+                                : Icons.local_drink_outlined,
+                            size: 24,
+                            color: isFilled
+                                ? const Color(0xFF38BDF8)
+                                : AppColors.darkTextTertiary
+                                    .withValues(alpha: 0.4),
+                          ),
+                        );
+                      }),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
 
-              // Archive / Unarchive Action
-              AppButton(
-                label: habit.isArchived
-                    ? AppStrings.unarchiveHabit
-                    : AppStrings.archiveHabit,
-                variant: AppButtonVariant.secondary,
-                isLoading: _isLoading,
-                onPressed: _toggleArchive,
-              ),
-              const SizedBox(height: 12),
+              const Spacer(),
 
-              // Delete Action
+              // Full width green button matching Screen 6: "✓ Tandai Selesai"
               AppButton(
-                label: AppStrings.deleteHabit,
-                variant: AppButtonVariant.destructive,
-                isLoading: _isLoading,
-                onPressed: _confirmDelete,
+                label:
+                    isAlreadyCompleted ? 'Sudah Selesai' : '✓ Tandai Selesai',
+                isLoading: _isProcessing,
+                onPressed: isAlreadyCompleted ? null : _handleComplete,
               ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildRow({
-    required IconData icon,
-    required String label,
-    required String value,
-    required bool isDark,
-    Color? accentColor,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: accentColor ??
-                  (isDark
-                      ? AppColors.darkTextSecondary
-                      : AppColors.lightTextSecondary),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: AppTypography.bodyMedium.copyWith(
-                color: isDark
-                    ? AppColors.darkTextSecondary
-                    : AppColors.lightTextSecondary,
-              ),
-            ),
-          ],
-        ),
-        Text(
-          value,
-          style: AppTypography.titleMedium.copyWith(
-            fontSize: 14,
-            color: accentColor ??
-                (isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.lightTextPrimary),
-          ),
-        ),
-      ],
     );
   }
 }
