@@ -20,6 +20,13 @@ class AppTypography {
         height: 1.3,
       );
 
+  static TextStyle get headlineSmall => GoogleFonts.plusJakartaSans(
+        fontSize: 19,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.2,
+        height: 1.3,
+      );
+
   static TextStyle get titleLarge => GoogleFonts.plusJakartaSans(
         fontSize: 18,
         fontWeight: FontWeight.w600,
@@ -32,6 +39,24 @@ class AppTypography {
         fontWeight: FontWeight.w600,
         letterSpacing: -0.1,
         height: 1.4,
+      );
+
+  static TextStyle get labelLarge => GoogleFonts.plusJakartaSans(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.1,
+      );
+
+  static TextStyle get labelMedium => GoogleFonts.plusJakartaSans(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.1,
+      );
+
+  static TextStyle get labelSmall => GoogleFonts.plusJakartaSans(
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.1,
       );
 
   static TextStyle get bodyLarge => GoogleFonts.plusJakartaSans(
@@ -76,4 +101,3 @@ class AppTypography {
         fontFeatures: const [FontFeature.tabularFigures()],
       );
 }
-
