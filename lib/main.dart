@@ -24,6 +24,7 @@ void main() async {
     try {
       await Supabase.initialize(
         url: EnvConfig.supabaseUrl,
+        // ignore: deprecated_member_use
         anonKey: EnvConfig.supabaseAnonKey,
         authOptions: const FlutterAuthClientOptions(
           authFlowType: AuthFlowType.pkce,

@@ -25,4 +25,3 @@ class EnvConfig {
       supabaseAnonKey.isNotEmpty &&
       supabaseUrl.startsWith('https://');
 }
-

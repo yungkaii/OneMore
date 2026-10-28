@@ -23,4 +23,3 @@ class OneMoreApp extends ConsumerWidget {
     );
   }
 }
-

@@ -113,7 +113,7 @@ void main() {
       expect(find.text('Membaca Buku 15 Menit'), findsOneWidget);
       expect(find.text('+15 XP'), findsOneWidget);
 
-      await tester.tap(find.byType(GestureDetector));
+      await tester.tap(find.byType(GestureDetector).last);
       await tester.pump();
 
       expect(toggled, isTrue);
