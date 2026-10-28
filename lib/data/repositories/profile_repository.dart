@@ -118,6 +118,24 @@ class ProfileRepository {
     }
   }
 
+  /// Fetches real historical completions / XP records for the user.
+  Future<List<Map<String, dynamic>>> fetchXpHistory(String userId) async {
+    _ensureClient();
+    try {
+      final completions = await _client!
+          .from('habit_completions')
+          .select(
+              'id, completion_date, xp_awarded, created_at, habits(title, category, icon_name)')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .limit(20);
+
+      return List<Map<String, dynamic>>.from(completions);
+    } catch (e) {
+      return [];
+    }
+  }
+
   void _ensureClient() {
     if (_client == null) {
       throw const DatabaseException(

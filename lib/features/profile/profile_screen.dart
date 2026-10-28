@@ -295,17 +295,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final displayName =
         (profile?.displayName != null && profile!.displayName.trim().isNotEmpty)
             ? profile.displayName
-            : (user?.email?.split('@').first ?? 'Yukafii');
-    final level = profile?.currentLevel ?? 5;
-    final currentXp = profile != null ? profile.xpInCurrentLevel : 320;
+            : (user?.userMetadata?['display_name'] as String? ??
+                user?.email?.split('@').first ??
+                'Teman One More');
+    final level = profile?.currentLevel ?? 1;
+    final currentXp = profile != null ? profile.xpInCurrentLevel : 0;
     final xpForNextLevel =
-        profile != null ? profile.xpRequiredForNextLevel : 500;
+        profile != null ? profile.xpRequiredForNextLevel : 100;
     final xpRatio =
         (currentXp / (xpForNextLevel > 0 ? xpForNextLevel : 1)).clamp(0.0, 1.0);
 
-    final currentStreak = profile?.currentStreak ?? 7;
-    const completedMissionsCount = 18;
-    const unlockedAchievementsCount = 3;
+    final currentStreak = profile?.currentStreak ?? 0;
+    final completedMissionsCount =
+        ref.watch(weeklyStatsProvider).value?.totalCompletions ?? 0;
+    final unlockedAchievementsCount =
+        (ref.watch(achievementsListProvider).value ?? [])
+            .where((a) => a.isUnlocked)
+            .length;
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,

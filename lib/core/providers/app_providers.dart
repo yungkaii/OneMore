@@ -324,9 +324,10 @@ class TodayCompletionsNotifier extends StateNotifier<AsyncValue<Set<String>>> {
           longestStreak: result.longestStreak,
         );
 
-    // Invalidate weekly stats and achievements so they refresh
+    // Invalidate weekly stats, achievements, and xp history so they refresh
     ref.invalidate(weeklyStatsProvider);
     ref.invalidate(achievementsListProvider);
+    ref.invalidate(xpHistoryProvider);
 
     return result;
   }
@@ -377,4 +378,16 @@ final weeklyStatsProvider = FutureProvider<ProgressAnalytics>((ref) async {
     today: now,
     activeHabits: activeHabits,
   );
+});
+
+// -----------------------------------------------------------------------------
+// Real XP History Provider
+// -----------------------------------------------------------------------------
+
+final xpHistoryProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return [];
+  final repo = ref.watch(profileRepositoryProvider);
+  return repo.fetchXpHistory(user.id);
 });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_typography.dart';
 import '../../core/providers/app_providers.dart';
@@ -9,42 +10,30 @@ import '../../core/widgets/app_card.dart';
 class LevelXpScreen extends ConsumerWidget {
   const LevelXpScreen({super.key});
 
+  String _formatTimestamp(dynamic createdAtRaw) {
+    if (createdAtRaw == null) return 'Baru saja';
+    DateTime? dt = DateTime.tryParse(createdAtRaw.toString())?.toLocal();
+    if (dt == null) return 'Baru saja';
+
+    final now = DateTime.now();
+    final isToday =
+        dt.year == now.year && dt.month == now.month && dt.day == now.day;
+    final isYesterday =
+        dt.year == now.year && dt.month == now.month && dt.day == now.day - 1;
+
+    final timeStr = DateFormat('HH:mm').format(dt);
+
+    if (isToday) return 'Hari ini • $timeStr';
+    if (isYesterday) return 'Kemarin • $timeStr';
+    return '${DateFormat("d MMM", "id_ID").format(dt)} • $timeStr';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileNotifierProvider).value;
-    final level = profile?.currentLevel ?? 5;
-    final xp = profile?.xpInCurrentLevel ?? 320;
-
-    final history = [
-      {
-        'title': 'Minum Air 8 Gelas',
-        'time': 'Hari ini • 06:12',
-        'xp': 20,
-        'icon': Icons.water_drop_rounded,
-        'color': const Color(0xFF0284C7),
-      },
-      {
-        'title': 'Olahraga 30 Menit',
-        'time': 'Kemarin • 17:45',
-        'xp': 30,
-        'icon': Icons.directions_run_rounded,
-        'color': const Color(0xFF6366F1),
-      },
-      {
-        'title': 'Baca Buku 20 Menit',
-        'time': '24 Okt • 20:10',
-        'xp': 20,
-        'icon': Icons.menu_book_rounded,
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'title': 'Tidur 7-8 Jam',
-        'time': '23 Okt • 22:30',
-        'xp': 20,
-        'icon': Icons.bedtime_rounded,
-        'color': const Color(0xFF8B5CF6),
-      },
-    ];
+    final level = profile?.currentLevel ?? 1;
+    final xp = profile?.xpInCurrentLevel ?? 0;
+    final historyAsync = ref.watch(xpHistoryProvider);
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
@@ -64,7 +53,7 @@ class LevelXpScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Hero Level & Milestone Stepper Card matching Screen 7
+              // Hero Level & Milestone Stepper Card
               AppCard(
                 padding: const EdgeInsets.all(20),
                 backgroundColor: AppColors.darkSurface,
@@ -107,19 +96,23 @@ class LevelXpScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
 
-                    // Stepper nodes row matching Screen 7
+                    // Stepper nodes row matching level progression
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildStepNode(
-                          label: 'Lv. ${level - 1}',
-                          icon: Icons.military_tech_rounded,
-                          isReached: true,
+                          label: level > 1 ? 'Lv. ${level - 1}' : 'Mulai',
+                          icon: level > 1
+                              ? Icons.military_tech_rounded
+                              : Icons.flag_rounded,
+                          isReached: level > 1,
                         ),
                         Expanded(
                           child: Container(
                             height: 2,
-                            color: AppColors.accentGreen,
+                            color: level > 1
+                                ? AppColors.accentGreen
+                                : AppColors.darkBorder,
                           ),
                         ),
                         _buildStepNode(
@@ -156,71 +149,136 @@ class LevelXpScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
 
-              // History items list matching Screen 7
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: history.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final item = history[index];
-                  final color = item['color'] as Color;
+              // Real History Items from Supabase
+              historyAsync.when(
+                data: (historyList) {
+                  if (historyList.isEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 32),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkSurface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.darkBorder),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 38,
+                            color: AppColors.darkTextTertiary
+                                .withValues(alpha: 0.6),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Belum Ada Riwayat XP',
+                            style: AppTypography.titleMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Selesaikan misi kebiasaan harian pertamamu\nuntuk mulai mengumpulkan XP!',
+                            textAlign: TextAlign.center,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.darkTextSecondary,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
-                  return AppCard(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    backgroundColor: AppColors.darkSurface,
-                    borderColor: AppColors.darkBorder,
-                    child: Row(
-                      children: [
-                        Container(
-                          height: 40,
-                          width: 40,
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            item['icon'] as IconData,
-                            color: color,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item['title'] as String,
-                                style: AppTypography.titleMedium.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                ),
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: historyList.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final item = historyList[index];
+                      final habitData = item['habits'] as Map<String, dynamic>?;
+                      final title =
+                          habitData?['title'] as String? ?? 'Penyelesaian Misi';
+                      final timeStr = _formatTimestamp(item['created_at']);
+                      final xpDelta = item['xp_awarded'] ?? 15;
+
+                      return AppCard(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        backgroundColor: AppColors.darkSurface,
+                        borderColor: AppColors.darkBorder,
+                        child: Row(
+                          children: [
+                            Container(
+                              height: 40,
+                              width: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.accentGreen
+                                    .withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                item['time'] as String,
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: AppColors.darkTextSecondary,
-                                  fontSize: 11,
-                                ),
+                              child: const Icon(
+                                Icons.task_alt_rounded,
+                                color: AppColors.accentGreen,
+                                size: 20,
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: AppTypography.titleMedium.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    timeStr,
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: AppColors.darkTextSecondary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '+$xpDelta XP',
+                              style: AppTypography.statNumberSmall.copyWith(
+                                color: AppColors.accentGreen,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          '+${item['xp']} XP',
-                          style: AppTypography.statNumberSmall.copyWith(
-                            color: AppColors.accentGreen,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   );
                 },
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppColors.accentGreen),
+                    ),
+                  ),
+                ),
+                error: (e, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text('Gagal memuat riwayat: $e'),
+                  ),
+                ),
               ),
             ],
           ),

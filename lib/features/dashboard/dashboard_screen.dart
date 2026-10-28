@@ -78,6 +78,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final profileAsync = ref.watch(profileNotifierProvider);
     final habitsAsync = ref.watch(habitsNotifierProvider);
     final completionsAsync = ref.watch(todayCompletionsProvider);
+    final user = ref.watch(currentUserProvider);
+
+    final resolvedName = (profileAsync.valueOrNull?.displayName != null &&
+            profileAsync.valueOrNull!.displayName.trim().isNotEmpty)
+        ? profileAsync.valueOrNull!.displayName
+        : (user?.userMetadata?['display_name'] as String? ??
+            user?.email?.split('@').first ??
+            'Teman');
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
@@ -101,13 +109,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Top Greeting & Avatar
-                profileAsync.when(
-                  data: (profile) => GreetingCard(
-                    displayName: profile?.displayName ?? 'Yukafii',
-                    onAvatarTap: () => context.go('/profile'),
-                  ),
-                  loading: () => const GreetingCard(displayName: 'Yukafii'),
-                  error: (_, __) => const GreetingCard(displayName: 'Yukafii'),
+                GreetingCard(
+                  displayName: resolvedName,
+                  onAvatarTap: () => context.go('/profile'),
                 ),
                 const SizedBox(height: 18),
 

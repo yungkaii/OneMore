@@ -12,30 +12,21 @@ class StreakScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileNotifierProvider).value;
-    final streak = profile?.currentStreak ?? 7;
-
-    final achievements = [
-      {
-        'title': 'Pemula',
-        'desc': 'Selesaikan 5 misi',
-        'color': AppColors.gold,
-        'icon': Icons.military_tech_rounded,
-      },
-      {
-        'title': 'Konsisten',
-        'desc': 'Streak 7 hari',
-        'color': AppColors.purple,
-        'icon': Icons.verified_rounded,
-      },
-      {
-        'title': 'Produktif',
-        'desc': 'Selesaikan 30 misi',
-        'color': AppColors.accentStreak,
-        'icon': Icons.workspace_premium_rounded,
-      },
-    ];
+    final streak = profile?.currentStreak ?? 0;
+    final achievementsAsync = ref.watch(achievementsListProvider);
+    final stats = ref.watch(weeklyStatsProvider).value;
 
     const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+
+    // Map which days in the past 7 days had completions
+    final completedDaysSet = <String>{};
+    if (stats != null) {
+      for (final s in stats.weeklyActivity) {
+        if (s.completedCount > 0) {
+          completedDaysSet.add(s.dayLabel);
+        }
+      }
+    }
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
@@ -55,7 +46,7 @@ class StreakScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Hero Flame & Weekday Row Card matching Screen 8
+              // Hero Flame & Weekday Row Card
               AppCard(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -78,7 +69,7 @@ class StreakScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
 
-                    // "7 Hari"
+                    // Real Streak Days
                     Text(
                       '$streak Hari',
                       style: AppTypography.headlineLarge.copyWith(
@@ -89,7 +80,9 @@ class StreakScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Terus pertahankan streak-mu!',
+                      streak > 0
+                          ? 'Terus pertahankan streak-mu!'
+                          : 'Selesaikan misi hari ini untuk menyalakan streak!',
                       style: AppTypography.bodySmall.copyWith(
                         color: AppColors.darkTextSecondary,
                         fontSize: 12,
@@ -97,11 +90,14 @@ class StreakScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
 
-                    // 7 Weekday flames matching Screen 8
+                    // 7 Weekday flames (active if user completed habit on that day)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(7, (i) {
-                        final isActive = i < streak;
+                        final dayName = days[i];
+                        final isActive = completedDaysSet.contains(dayName) ||
+                            (streak > 0 && i < streak && i < 7);
+
                         return Column(
                           children: [
                             Container(
@@ -187,64 +183,111 @@ class StreakScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
 
-              // Achievement list matching Screen 8
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: achievements.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final ach = achievements[index];
-                  final color = ach['color'] as Color;
+              // Real Achievement List from database
+              achievementsAsync.when(
+                data: (achList) {
+                  final displayList = achList.take(3).toList();
+                  if (displayList.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(20),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Belum ada pencapaian terbuka.',
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.darkTextSecondary),
+                      ),
+                    );
+                  }
 
-                  return AppCard(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    backgroundColor: AppColors.darkSurface,
-                    borderColor: AppColors.darkBorder,
-                    child: Row(
-                      children: [
-                        Container(
-                          height: 40,
-                          width: 40,
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            ach['icon'] as IconData,
-                            color: color,
-                            size: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                ach['title'] as String,
-                                style: AppTypography.titleMedium.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: displayList.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final ach = displayList[index];
+                      final isUnlocked = ach.isUnlocked;
+                      final Color color = index == 0
+                          ? AppColors.gold
+                          : (index == 1
+                              ? AppColors.purple
+                              : AppColors.accentStreak);
+
+                      return AppCard(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        backgroundColor: AppColors.darkSurface,
+                        borderColor: AppColors.darkBorder,
+                        child: Row(
+                          children: [
+                            Container(
+                              height: 40,
+                              width: 40,
+                              decoration: BoxDecoration(
+                                color: isUnlocked
+                                    ? color.withValues(alpha: 0.2)
+                                    : AppColors.darkSurfaceElevated,
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                ach['desc'] as String,
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: AppColors.darkTextSecondary,
-                                  fontSize: 11,
-                                ),
+                              child: Icon(
+                                isUnlocked
+                                    ? Icons.stars_rounded
+                                    : Icons.lock_outline_rounded,
+                                color: isUnlocked
+                                    ? color
+                                    : AppColors.darkTextTertiary,
+                                size: 22,
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    ach.title,
+                                    style: AppTypography.titleMedium.copyWith(
+                                      color: isUnlocked
+                                          ? Colors.white
+                                          : AppColors.darkTextSecondary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    ach.description,
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: AppColors.darkTextTertiary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isUnlocked)
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: AppColors.accentGreen,
+                                size: 18,
+                              ),
+                          ],
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   );
                 },
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(AppColors.accentGreen),
+                    ),
+                  ),
+                ),
+                error: (e, _) => Center(child: Text('Gagal: $e')),
               ),
             ],
           ),
